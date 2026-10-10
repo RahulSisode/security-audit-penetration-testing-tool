@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>WebGuard Security Side Panel</title>
+  <link rel="stylesheet" href="sidepanel.css">
+</head>
+<body>
+  <div class="sidepanel-container">
+    <!-- Header -->
+    <header class="panel-header">
+      <div class="brand">
+        <span class="icon">🛡️</span>
+        <div>
+          <h2>WebGuard Side Panel</h2>
+          <p class="target-title" id="panelTarget">Ready to inspect tab...</p>
+        </div>
+      </div>
+      <div id="sideGradeBadge" class="grade-badge grade-a">A</div>
+    </header>
+
+    <!-- Scan Button & Quick Actions -->
+    <div class="actions-bar">
+      <button id="sideScanBtn" class="btn-primary">
+        <span>⚡ Scan Current Tab</span>
+      </button>
+      <button id="exportHtmlBtn" class="btn-secondary">
+        <span>📄 Export HTML</span>
+      </button>
+    </div>
+
+    <!-- Live Firewall & Shield Banner -->
+    <div class="firewall-card" id="sideFirewallCard">
+      <div class="firewall-top">
+        <div class="firewall-left">
+          <span class="firewall-icon">🛡️</span>
+          <div>
+            <span class="firewall-title">Firewall & Perimeter Protection</span>
+            <span class="firewall-status" id="sideFirewallStatus">Active • WAF & TLS Protected</span>
+          </div>
+        </div>
+        <span class="pill-firewall" id="sideFirewallBadge">ACTIVE</span>
+      </div>
+    </div>
+
+    <!-- Mode Tabs -->
+    <div class="tab-nav">
+      <button class="nav-tab active" id="sideTabVulns">Vulnerabilities (<span id="countAll">0</span>)</button>
+      <button class="nav-tab" id="sideTabDefenses">Applied Defenses (<span id="sideDefenseCount">6</span>)</button>
+      <button class="nav-tab" id="sideTabEndpoints">API Surface (<span id="sideEndpointCount">0</span>)</button>
+    </div>
+
+    <!-- Stats Bar -->
+    <div class="stats-row">
+      <div class="stat-box crit">
+        <span class="stat-num" id="sideCrit">0</span>
+        <span class="stat-name">Critical</span>
+      </div>
+      <div class="stat-box high">
+        <span class="stat-num" id="sideHigh">0</span>
+        <span class="stat-name">High</span>
+      </div>
+      <div class="stat-box med">
+        <span class="stat-num" id="sideMed">0</span>
+        <span class="stat-name">Medium</span>
+      </div>
+      <div class="stat-box low">
+        <span class="stat-num" id="sideLow">0</span>
+        <span class="stat-name">Low</span>
+      </div>
+    </div>
+
+    <!-- Filter Chips -->
+    <div class="filter-chips">
+      <button class="chip active" data-filter="ALL">All</button>
+      <button class="chip chip-crit" data-filter="CRITICAL">Critical</button>
+      <button class="chip chip-high" data-filter="HIGH">High</button>
+      <button class="chip chip-med" data-filter="MEDIUM">Medium</button>
+      <button class="chip chip-low" data-filter="LOW">Low</button>
+    </div>
+
+    <!-- Search Input -->
+    <input type="text" id="sideSearch" class="search-input" placeholder="🔍 Search findings by rule, title, or code...">
+
+    <!-- View 1: Findings Container -->
+    <div id="sideFindingsView" class="view-panel active">
+      <div id="sideFindingsList" class="findings-container">
+        <div class="empty-state">
+          <p>🛡️</p>
+          <p>Click "Scan Current Tab" to begin deep security inspection.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- View 2: Applied Defenses View -->
+    <div id="sideDefensesView" class="view-panel">
+      <div id="sideDefensesList" class="defenses-container">
+        <!-- Injected dynamically -->
+      </div>
+    </div>
+
+    <!-- View 3: API & Bug Hunting Attack Surface View -->
+    <div id="sideEndpointsView" class="view-panel">
+      <div id="sideEndpointsList" class="findings-container">
+        <!-- Injected dynamically -->
+      </div>
+    </div>
+  </div>
+
+  <script type="module" src="sidepanel.js"></script>
+</body>
+</html>

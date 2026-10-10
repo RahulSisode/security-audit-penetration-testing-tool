@@ -1,0 +1,9 @@
+node_modules/
+out/
+dist/
+*.vsix
+scan-report.*
+.sentinel/
+.sentinel-baseline.json
+.vscode-test/
+.DS_Store

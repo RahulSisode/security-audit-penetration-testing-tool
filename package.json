@@ -1,0 +1,179 @@
+{
+  "name": "sentinel-security",
+  "displayName": "Sentinel Security",
+  "description": "Zero-API, cross-platform security scanner detecting SAST, SCA, secrets, IaC, API flaws, taint flows, and authorized DAST.",
+  "version": "1.0.0",
+  "publisher": "sentinel-security",
+  "author": "Sentinel Security Engineering Team",
+  "license": "Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/sentinel-security/sentinel.git"
+  },
+  "engines": {
+    "vscode": "^1.80.0"
+  },
+  "categories": [
+    "Linters",
+    "Security",
+    "Programming Languages"
+  ],
+  "keywords": [
+    "security",
+    "sast",
+    "sca",
+    "secrets",
+    "vulnerabilities",
+    "cve",
+    "cwe",
+    "owasp",
+    "gitleaks",
+    "semgrep",
+    "trivy",
+    "checkov",
+    "dast",
+    "taint analysis"
+  ],
+  "main": "./out/src/extension.js",
+  "bin": {
+    "sentinel": "./out/bin/sentinel-cli.js"
+  },
+  "activationEvents": [
+    "onStartupFinished"
+  ],
+  "contributes": {
+    "commands": [
+      {
+        "command": "sentinel.fullScan",
+        "title": "Sentinel: Run Full Security Scan",
+        "icon": "$(shield)",
+        "category": "Sentinel Security"
+      },
+      {
+        "command": "sentinel.openDashboard",
+        "title": "Sentinel: Open Security Dashboard",
+        "icon": "$(graph)",
+        "category": "Sentinel Security"
+      },
+      {
+        "command": "sentinel.exportSARIF",
+        "title": "Sentinel: Export Report as SARIF",
+        "icon": "$(export)",
+        "category": "Sentinel Security"
+      },
+      {
+        "command": "sentinel.exportHTML",
+        "title": "Sentinel: Export Report as HTML",
+        "icon": "$(file-code)",
+        "category": "Sentinel Security"
+      },
+      {
+        "command": "sentinel.scanDAST",
+        "title": "Sentinel: Run Authorized DAST Probe",
+        "icon": "$(pulse)",
+        "category": "Sentinel Security"
+      }
+    ],
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "sentinel-sidebar",
+          "title": "Sentinel Security",
+          "icon": "media/shield.svg"
+        }
+      ]
+    },
+    "views": {
+      "sentinel-sidebar": [
+        {
+          "type": "webview",
+          "id": "sentinelSidebarView",
+          "name": "Sentinel Security",
+          "icon": "media/shield.svg"
+        },
+        {
+          "id": "sentinelFindingsView",
+          "name": "Findings Explorer"
+        }
+      ]
+    },
+    "viewsWelcome": [
+      {
+        "view": "sentinelFindingsView",
+        "contents": "No security scan performed yet.\n[▶ Run Full Security Scan](command:sentinel.fullScan)\n[📊 Open Visual Dashboard](command:sentinel.openDashboard)"
+      }
+    ],
+    "menus": {
+      "view/title": [
+        {
+          "command": "sentinel.fullScan",
+          "when": "view == sentinelFindingsView",
+          "group": "navigation@1"
+        },
+        {
+          "command": "sentinel.openDashboard",
+          "when": "view == sentinelFindingsView",
+          "group": "navigation@2"
+        },
+        {
+          "command": "sentinel.exportHTML",
+          "when": "view == sentinelFindingsView",
+          "group": "navigation@3"
+        }
+      ]
+    },
+    "configuration": {
+      "title": "Sentinel Security",
+      "properties": {
+        "sentinel.maxFileSizeMb": {
+          "type": "number",
+          "default": 5,
+          "description": "Maximum file size in MB to analyze."
+        },
+        "sentinel.ollama.enabled": {
+          "type": "boolean",
+          "default": false,
+          "description": "Enable optional local AI assistant via Ollama."
+        },
+        "sentinel.ollama.endpoint": {
+          "type": "string",
+          "default": "http://127.0.0.1:11434",
+          "description": "Endpoint URL for local Ollama instance."
+        },
+        "sentinel.ollama.model": {
+          "type": "string",
+          "default": "llama3",
+          "description": "Model identifier for local AI explanations."
+        },
+        "sentinel.dast.timeoutSeconds": {
+          "type": "number",
+          "default": 120,
+          "description": "Timeout in seconds for authorized DAST probes."
+        }
+      }
+    }
+  },
+  "scripts": {
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./",
+    "build": "tsc -p ./",
+    "test": "npm run build && mocha 'out/test/unit/**/*.test.js'",
+    "benchmark": "npm run build && node out/test/benchmark/benchmark.js",
+    "setup": "bash scripts/setup.sh",
+    "setup:tools": "npm run build && node out/scripts/provision-scanners.js",
+    "scan": "npm run build && node out/bin/sentinel-cli.js scan",
+    "package": "vsce package --no-dependencies --allow-missing-repository"
+  },
+  "devDependencies": {
+    "@types/chai": "^5.2.0",
+    "@types/mocha": "^10.0.10",
+    "@types/node": "^20.14.0",
+    "@types/vscode": "^1.80.0",
+    "@vscode/vsce": "^3.2.1",
+    "chai": "^4.3.10",
+    "esbuild": "^0.25.0",
+    "mocha": "^10.8.2",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.8.2"
+  }
+}

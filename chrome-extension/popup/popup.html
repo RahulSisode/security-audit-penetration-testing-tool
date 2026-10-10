@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>WebGuard Security</title>
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+  <div class="popup-container">
+    <!-- Header -->
+    <header class="popup-header">
+      <div class="brand">
+        <span class="brand-icon">🛡️</span>
+        <div class="brand-info">
+          <h2>WebGuard</h2>
+          <span class="badge-zero-api">Zero-API Engine</span>
+        </div>
+      </div>
+      <div id="gradeBadge" class="grade-badge grade-a">A</div>
+    </header>
+
+    <!-- Scan Trigger Button -->
+    <div class="action-section">
+      <button id="scanBtn" class="btn-primary">
+        <span class="btn-icon">⚡</span>
+        <span id="scanBtnText">Scan Active Page / Repo</span>
+      </button>
+      <button id="sidePanelBtn" class="btn-secondary" title="Open Full Side Panel View">
+        <span>📖 Side Panel</span>
+      </button>
+    </div>
+
+    <!-- Live Firewall & Shield Status Banner -->
+    <div class="firewall-card" id="firewallCard">
+      <div class="firewall-top">
+        <div class="firewall-left">
+          <span class="firewall-icon">🛡️</span>
+          <div>
+            <span class="firewall-title">Firewall & Perimeter Shield</span>
+            <span class="firewall-status" id="firewallStatus">Enabled • Active WAF</span>
+          </div>
+        </div>
+        <span class="pill-firewall" id="firewallBadge">ACTIVE</span>
+      </div>
+    </div>
+
+    <!-- Navigation Tabs (Vulnerabilities vs Applied Defenses vs Endpoints) -->
+    <div class="tab-nav">
+      <button class="nav-tab active" id="tabVulnsBtn">Vulnerabilities (<span id="vulnCount">0</span>)</button>
+      <button class="nav-tab" id="tabDefensesBtn">Applied Defenses (<span id="defenseCount">6</span>)</button>
+      <button class="nav-tab" id="tabEndpointsBtn">Endpoints (<span id="endpointCount">0</span>)</button>
+    </div>
+
+    <!-- Metrics Row -->
+    <div class="metrics-grid">
+      <div class="metric-card crit">
+        <span class="metric-val" id="critCount">0</span>
+        <span class="metric-lbl">Critical</span>
+      </div>
+      <div class="metric-card high">
+        <span class="metric-val" id="highCount">0</span>
+        <span class="metric-lbl">High</span>
+      </div>
+      <div class="metric-card med">
+        <span class="metric-val" id="medCount">0</span>
+        <span class="metric-lbl">Medium</span>
+      </div>
+      <div class="metric-card low">
+        <span class="metric-val" id="lowCount">0</span>
+        <span class="metric-lbl">Low</span>
+      </div>
+    </div>
+
+    <!-- Target Box -->
+    <div class="target-box">
+      <span class="target-label">Target:</span>
+      <span class="target-url" id="targetUrl">Ready to scan...</span>
+    </div>
+
+    <!-- View 1: Vulnerabilities Stream -->
+    <div id="vulnView" class="view-panel active">
+      <div id="findingsList" class="findings-list">
+        <div class="empty-state">
+          <p>🛡️</p>
+          <p>Click "Scan Active Page" to audit DOM scripts, secrets, and code risks.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- View 2: Applied Security Defenses -->
+    <div id="defensesView" class="view-panel">
+      <div id="defensesList" class="defenses-list">
+        <!-- Injected dynamically -->
+      </div>
+    </div>
+
+    <!-- View 3: API Endpoints & Bug Hunting Surface -->
+    <div id="endpointsView" class="view-panel">
+      <div id="endpointsList" class="findings-list">
+        <!-- Injected dynamically -->
+      </div>
+    </div>
+
+    <!-- Footer -->
+    <footer class="popup-footer">
+      <span>Sentinel 1.0.0 • 100% Local</span>
+      <button id="exportBtn" class="btn-link">Export SARIF</button>
+    </footer>
+  </div>
+
+  <script type="module" src="popup.js"></script>
+</body>
+</html>

@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Sentinel Security Test Target Page</title>
+  <style>
+    body { font-family: system-ui, sans-serif; padding: 40px; background: #0f172a; color: #f8fafc; }
+    .box { background: #1e293b; border: 1px solid #334155; padding: 24px; border-radius: 12px; max-width: 600px; margin: 0 auto; }
+    h1 { color: #38bdf8; margin-top: 0; }
+    code { background: #090d16; color: #f43f5e; padding: 2px 6px; border-radius: 4px; }
+  </style>
+</head>
+<body>
+  <div class="box">
+    <h1>🛡️ Sentinel Security — Test Bed</h1>
+    <p>This page contains intentional, safe test samples to verify that the Sentinel Security Chrome extension detects DOM flaws, exposed keys, and insecure configurations:</p>
+    
+    <ul>
+      <li><strong>DOM XSS Sink:</strong> <code>document.getElementById('demo').innerHTML = untrustedInput;</code></li>
+      <li><strong>Dynamic Eval:</strong> <code>eval(userInput);</code></li>
+      <li><strong>Predictable Key RNG:</strong> <code>const token = 'session_' + Math.random();</code></li>
+      <li><strong>Simulated AWS Key:</strong> <code>AKIAIOSFODNN72948271</code></li>
+      <li><strong>Simulated OpenAI Key:</strong> <code>sk-proj-aB9182uXkL091823746152435</code></li>
+      <li><strong>Simulated Database URI:</strong> <code>postgres://admin:SuperSecret99@db.internal:5432/app</code></li>
+    </ul>
+
+    <div id="demo"></div>
+  </div>
+
+  <script>
+    // 1. Simulated DOM Injection (XSS)
+    const untrustedInput = window.location.hash.substring(1);
+    if (untrustedInput) {
+      document.getElementById('demo').innerHTML = untrustedInput;
+    }
+
+    // 2. Simulated Dynamic Code Execution (Eval)
+    function runExpression(userInput) {
+      return eval(userInput);
+    }
+
+    // 3. Simulated Token Insecurity
+    function generateSessionToken() {
+      const token = 'session_' + Math.random().toString(36).substring(2);
+      return token;
+    }
+
+    // 4. Simulated Exposed Cloud Secrets
+    const AWS_ACCESS_KEY = "AKIAIOSFODNN72948271";
+    const OPENAI_SECRET = "sk-proj-aB9182uXkL091823746152435";
+    const DATABASE_URL = "postgres://admin:SuperSecret99@db.internal:5432/app";
+  </script>
+</body>
+</html>
