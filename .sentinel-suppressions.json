@@ -1,0 +1,13 @@
+[
+  {
+    "filePath": "test-page.html",
+    "justification": "Authorized testbed fixture simulating security detection targets for Chrome extension audit testing",
+    "suppressedBy": "Security Team"
+  },
+  {
+    "filePath": "test/unit/sentinel.test.ts",
+    "category": "SECRETS",
+    "justification": "Unit test mock strings used to verify secret and PII regex redaction engine",
+    "suppressedBy": "Security Team"
+  }
+]

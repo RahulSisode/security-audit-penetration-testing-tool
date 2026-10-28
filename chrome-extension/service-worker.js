@@ -1,15 +1,47 @@
 import { auditWebEnvironment, discoverPassiveSubdomains } from './engine/scanner.js';
 
 /**
+ * Validates target URL against SSRF and private network metadata exposure
+ */
+function isValidHost(urlString) {
+  try {
+    const parsed = new URL(urlString);
+    if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {
+      return false;
+    }
+    const host = parsed.hostname.toLowerCase();
+    // Block cloud metadata services and localhost loopback
+    if (
+      host === '169.254.169.254' ||
+      host === 'metadata.google.internal' ||
+      host === 'metadata.internal' ||
+      host === 'localhost' ||
+      host === '127.0.0.1' ||
+      host === '::1' ||
+      host.endsWith('.local')
+    ) {
+      return false;
+    }
+    // Block private RFC 1918 / RFC 6598 ranges
+    if (/^(10\.|192\.168\.|172\.(1[6-9]|2[0-9]|3[0-1])\.|100\.(6[4-9]|[7-9][0-9]|1[0-1][0-9]|12[0-7])\.)/.test(host)) {
+      return false;
+    }
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/**
  * Fetch HTTP response headers for target URL
  */
-async function fetchHttpHeaders(url) {
-  if (!url || (!url.startsWith('http://') && !url.startsWith('https://'))) {
+async function fetchHttpHeaders(targetUrl) {
+  if (!isValidHost(targetUrl)) {
     return {};
   }
   const headers = {};
   try {
-    const resp = await fetch(url, {
+    const resp = await fetch(targetUrl, {
       method: 'HEAD',
       cache: 'no-cache',
       credentials: 'omit'
@@ -22,7 +54,7 @@ async function fetchHttpHeaders(url) {
     try {
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 3500);
-      const resp = await fetch(url, {
+      const resp = await fetch(targetUrl, {
         method: 'GET',
         cache: 'no-cache',
         credentials: 'omit',
@@ -33,7 +65,7 @@ async function fetchHttpHeaders(url) {
         headers[key.toLowerCase()] = val;
       });
     } catch (fallbackErr) {
-      console.warn('Could not fetch headers for:', url, fallbackErr);
+      console.warn('Could not fetch headers for:', targetUrl, fallbackErr);
     }
   }
   return headers;

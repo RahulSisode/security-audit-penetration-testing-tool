@@ -71,10 +71,18 @@ export class SuppressionManager {
             continue; // expired
           }
 
+          const matchesPath = !sup.filePath || finding.evidence.location.filePath.includes(sup.filePath);
+          const matchesFingerprint = sup.fingerprint ? sup.fingerprint === finding.fingerprint : true;
+          const matchesRule = sup.ruleId ? sup.ruleId === finding.ruleId : true;
+          const matchesCategory = sup.category ? sup.category === finding.category : true;
+
+          // If at least one identifier is specified and all specified filters match
           if (
-            (sup.fingerprint && sup.fingerprint === finding.fingerprint) ||
-            (sup.ruleId && sup.ruleId === finding.ruleId && (!sup.filePath || finding.evidence.location.filePath.includes(sup.filePath))) ||
-            (sup.category && sup.category === finding.category && (!sup.filePath || finding.evidence.location.filePath.includes(sup.filePath)))
+            (sup.fingerprint || sup.ruleId || sup.category || sup.filePath) &&
+            matchesPath &&
+            matchesFingerprint &&
+            matchesRule &&
+            matchesCategory
           ) {
             finding.suppression = {
               isSuppressed: true,
