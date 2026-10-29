@@ -8,7 +8,7 @@
 [![Zero API](https://img.shields.io/badge/Architecture-100%25_Local_Zero--API-brightgreen.svg)](#-zero-api-and-privacy-first-principles)
 [![OWASP](https://img.shields.io/badge/Mapped_To-OWASP_Top_10_2021-orange.svg)](#-detection-capabilities--feature-matrix)
 [![CVSS](https://img.shields.io/badge/Scoring-CVSS_v3.1-informational.svg)](#-automated-cvss-v31-scoring--reporting)
-[![Tests](https://img.shields.io/badge/Tests-Passing_16%2F16-brightgreen.svg)](#-testing--benchmarks)
+[![Tests](https://img.shields.io/badge/Tests-Passing_31%2F31-brightgreen.svg)](#-testing--benchmarks)
 [![Precision](https://img.shields.io/badge/Benchmark_Precision-100%25-blueviolet.svg)](#-testing--benchmarks)
 
 <p align="center">
@@ -45,6 +45,7 @@ Most web security tools suffer from two major flaws: they either charge expensiv
 | **🍪 Cookie & Session Security** | Audits session identifiers for missing `HttpOnly`, missing `Secure` flag on HTTPS, and lax or missing `SameSite` configurations. Flags cleartext session transmission. | **A07: Identification and Authentication Failures** |
 | **🔑 Leaked Secrets & Credentials** | High-entropy scanning across HTML, inline scripts, and bundle assets. Detects 30+ credential patterns including AWS Keys, OpenAI API keys, GitHub tokens, Slack Webhooks, Stripe keys, Private Keys, and Database URIs. | **A02: Cryptographic Failures** |
 | **⚡ DOM XSS & Client Sinks** | Audits DOM manipulation sinks: `innerHTML`, `outerHTML`, `document.write`, `eval()`, `setTimeout(string)`, unsanitized `location.hash` / `search` usage, unkeyed `window.addEventListener('message')`, and open redirects. | **A03: Injection** |
+| **🤖 Autonomous AI Security Agent** | Formulates structured threat hypotheses with exploit preconditions, non-destructive verification steps, false-positive triage against framework defenses, and verified code diff generation (100% local, Ollama-compatible with deterministic fallback). | **AppSec Reasoning & Triage** |
 | **🎟️ JWT & Token Auditing** | Scans `localStorage` and `sessionStorage` for JSON Web Tokens. Checks for insecure `alg: "none"`, missing or expired `exp` timestamp claims, and sensitive payload disclosure. | **A02: Cryptographic Failures** |
 | **🔒 Mixed Content & SRI** | Flags unencrypted HTTP scripts, styles, or iframes loaded on secure HTTPS pages. Validates Subresource Integrity (`integrity="sha384-..."`) on third-party CDNs. | **A08: Software and Data Integrity Failures** |
 | **🛠️ Technology Stack Profiling** | Detects underlying frameworks, front-end libraries, and CMS platforms (React, Vue, Angular, Next.js, WordPress, Laravel, Django, Express). | **A06: Vulnerable and Outdated Components** |
@@ -161,7 +162,7 @@ npm test
 ```
 ```text
 Test Suites: 3 passed, 3 total
-Tests:       16 passed, 16 total
+Tests:       31 passed, 31 total
 Snapshots:   0 total
 Time:        1.42 s
 ```
@@ -186,22 +187,25 @@ Duration:  43ms
 webguard/
 ├── chrome-extension/            # Manifest V3 Browser Extension
 │   ├── engine/
-│   │   └── scanner.js           # 100% Local Heuristics & SAST Scanner (Shannon Entropy)
+│   │   ├── scanner.js           # 100% Local Heuristics & SAST Scanner (Shannon Entropy)
+│   │   └── agent.js             # Autonomous AI Threat Modeling, Verification & Triage
 │   ├── popup/                   # 1-Click Quick Inspection HUD
 │   │   ├── popup.html
 │   │   ├── popup.css
 │   │   └── popup.js
-│   ├── sidepanel/               # Persistent Deep-Audit Side Panel
+│   ├── sidepanel/               # Persistent Deep-Audit Side Panel with Agent Investigation
 │   │   ├── sidepanel.html
 │   │   ├── sidepanel.css
 │   │   └── sidepanel.js
 │   ├── service-worker.js        # Background HTTP Header, Cookie & Recon Handler
 │   └── manifest.json            # MV3 Permissions & Host Declarations
 ├── src/                         # VS Code Extension & Core Engine (TypeScript)
+│   ├── ai/                      # Local Ollama & Autonomous AI Agent Engine
+│   │   └── agent/               # Threat Hypotheses, Verification Steps & Patch Generation
 │   ├── core/                    # Scope Enforcement & Capability Registry
 │   ├── engines/                 # SAST, Taint Analysis, SCA, Secrets, IaC, API
 │   └── extension.ts             # VS Code UI & Command Bindings
-├── test/                        # Automated Jest Test Suites
+├── test/                        # Automated Mocha/Jest Test Suites (31/31 Passing)
 └── package.json                 # Build Scripts & Tool Configurations
 ```
 

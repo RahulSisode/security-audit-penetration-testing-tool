@@ -154,6 +154,50 @@ export const SENTINEL_CAPABILITY_REGISTRY: CapabilityRegistryItem[] = [
     testSuite: 'test/unit/exporters.test.ts',
     status: 'TESTED',
     knownLimitations: ['Formats observed evidence and references; requires operator review before submission']
+  },
+  {
+    featureId: 'AI_AGENT_HYPOTHESIS_REASONING',
+    category: 'AI Security Agent',
+    description: 'Autonomous vulnerability hypothesis generation, attack vector reasoning, and precondition analysis',
+    implementationLocation: 'src/ai/agent/security-agent.ts::SentinelSecurityAgent',
+    requiredPermissions: [],
+    requiredDependencies: ['Local Ollama (optional fallback)'],
+    testSuite: 'test/unit/agent-and-safety.test.ts',
+    status: 'TESTED',
+    knownLimitations: ['High-fidelity offline reasoner provides deterministic fallback when Ollama is unavailable']
+  },
+  {
+    featureId: 'AI_AGENT_NON_DESTRUCTIVE_VERIFICATION',
+    category: 'AI Security Agent',
+    description: 'Multi-step non-destructive AST, taint flow, and framework sanitizer verification',
+    implementationLocation: 'src/ai/agent/security-agent.ts::SentinelSecurityAgent',
+    requiredPermissions: [],
+    requiredDependencies: [],
+    testSuite: 'test/unit/agent-and-safety.test.ts',
+    status: 'TESTED',
+    knownLimitations: ['Confined strictly to approved in-scope files and non-destructive checks']
+  },
+  {
+    featureId: 'AI_AGENT_REGRESSION_TEST_SYNTHESIS',
+    category: 'AI Security Agent',
+    description: 'Automated synthesis of executable regression unit tests (Mocha/Jest) and safe code patches',
+    implementationLocation: 'src/ai/agent/security-agent.ts::SentinelSecurityAgent',
+    requiredPermissions: [],
+    requiredDependencies: [],
+    testSuite: 'test/unit/agent-and-safety.test.ts',
+    status: 'TESTED',
+    knownLimitations: ['Tests verify fix boundaries and prevent security regressions']
+  },
+  {
+    featureId: 'SCOPE_REDIRECT_ENFORCEMENT',
+    category: 'Safety & Scope Guard',
+    description: 'Strict HTTP redirect rechecking, candidate sanitization, and real external target scanning prevention',
+    implementationLocation: 'src/core/scope.ts::ScopeManager',
+    requiredPermissions: ['Authorized Scope Manifest'],
+    requiredDependencies: [],
+    testSuite: 'test/unit/scope-and-registry.test.ts',
+    status: 'TESTED',
+    knownLimitations: ['Blocks redirects escaping authorized hostnames or targeting cloud metadata / external hosts']
   }
 ];
 

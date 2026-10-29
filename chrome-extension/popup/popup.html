@@ -45,10 +45,11 @@
       </div>
     </div>
 
-    <!-- Navigation Tabs (Vulnerabilities vs Applied Defenses vs Endpoints) -->
+    <!-- Navigation Tabs (Vulnerabilities vs AI Agent vs Applied Defenses vs Endpoints) -->
     <div class="tab-nav">
       <button class="nav-tab active" id="tabVulnsBtn">Vulnerabilities (<span id="vulnCount">0</span>)</button>
-      <button class="nav-tab" id="tabDefensesBtn">Applied Defenses (<span id="defenseCount">6</span>)</button>
+      <button class="nav-tab" id="tabAgentBtn">🤖 AI Agent</button>
+      <button class="nav-tab" id="tabDefensesBtn">Defenses (<span id="defenseCount">6</span>)</button>
       <button class="nav-tab" id="tabEndpointsBtn">Endpoints (<span id="endpointCount">0</span>)</button>
     </div>
 
@@ -72,10 +73,15 @@
       </div>
     </div>
 
-    <!-- Target Box -->
+    <!-- Target & Scope Guard Box -->
     <div class="target-box">
-      <span class="target-label">Target:</span>
-      <span class="target-url" id="targetUrl">Ready to scan...</span>
+      <div style="display:flex; justify-content:space-between; align-items:center;">
+        <div>
+          <span class="target-label">Target:</span>
+          <span class="target-url" id="targetUrl">Ready to scan...</span>
+        </div>
+        <span class="badge-scope" id="scopeStatusBadge" title="Scope strictly verified against active origin">SCOPE GUARDED</span>
+      </div>
     </div>
 
     <!-- View 1: Vulnerabilities Stream -->
@@ -88,14 +94,57 @@
       </div>
     </div>
 
-    <!-- View 2: Applied Security Defenses -->
+    <!-- View 2: AI Agent Triage -->
+    <div id="agentView" class="view-panel">
+      <div class="agent-panel">
+        <div class="agent-header-card">
+          <div style="display:flex; align-items:center; gap:8px;">
+            <span style="font-size:20px;">🤖</span>
+            <div>
+              <div style="font-weight:700; color:#fff; font-size:12px;">Sentinel AI Agent</div>
+              <div style="font-size:10px; color:#bc8cff;">Strix Threat Modeling & Verification</div>
+            </div>
+          </div>
+          <div style="display:flex; gap:4px; margin-top:6px;">
+            <span class="agent-badge">Zero-API Offline Safe</span>
+            <span class="agent-badge">Local Ollama Ready</span>
+          </div>
+        </div>
+
+        <div id="agentAnalysisContainer" style="background:#161b22; border:1px solid #30363d; border-radius:6px; padding:10px; margin-top:8px;">
+          <div style="font-weight:600; color:#58a6ff; font-size:11px; margin-bottom:4px;">🎯 Autonomous Threat Hypothesis</div>
+          <div id="agentHypoSummary" style="font-size:11px; color:#c9d1d9;">Run a scan or click "🤖 AI Investigate" on any finding to generate an autonomous hypothesis.</div>
+          
+          <div id="agentVerificationSection" style="margin-top:8px; display:none;">
+            <div style="font-weight:600; color:#3fb950; font-size:11px; margin-bottom:4px;">🔍 Non-Destructive Verification Steps</div>
+            <div id="agentStepsContent" style="font-size:10.5px; color:#8b949e;"></div>
+          </div>
+
+          <div id="agentRemediationSection" style="margin-top:8px; display:none;">
+            <div style="font-weight:600; color:#bc8cff; font-size:11px; margin-bottom:4px;">🛠️ Synthesized Patch & Test</div>
+            <pre id="agentRemediationDiff" style="background:#0d1117; padding:6px; border-radius:4px; font-size:10px; color:#79c0ff; overflow-x:auto;"></pre>
+          </div>
+        </div>
+
+        <!-- Interactive Consultation -->
+        <div style="margin-top:8px;">
+          <div style="display:flex; gap:4px;">
+            <input type="text" id="agentQueryInput" class="search-input" style="margin:0; padding:6px 10px; font-size:11px; flex:1;" placeholder="Ask agent about vulnerability risks...">
+            <button id="agentQueryBtn" class="btn-primary" style="padding:6px 12px; font-size:11px;">Ask</button>
+          </div>
+          <div id="agentQueryReply" style="margin-top:6px; font-size:11px; color:#8b949e; background:#0d1117; border:1px solid #30363d; border-radius:4px; padding:8px; max-height:120px; overflow-y:auto; display:none;"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- View 3: Applied Security Defenses -->
     <div id="defensesView" class="view-panel">
       <div id="defensesList" class="defenses-list">
         <!-- Injected dynamically -->
       </div>
     </div>
 
-    <!-- View 3: API Endpoints & Bug Hunting Surface -->
+    <!-- View 4: API Endpoints & Bug Hunting Surface -->
     <div id="endpointsView" class="view-panel">
       <div id="endpointsList" class="findings-list">
         <!-- Injected dynamically -->

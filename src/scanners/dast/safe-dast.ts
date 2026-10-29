@@ -1,10 +1,9 @@
-import * as http from 'http';
-import * as https from 'https';
 import * as crypto from 'crypto';
 import { URL } from 'url';
 import { BaseScanner } from '../base';
-import { SecurityFinding, ScannerExecutionResult, ScanOptions, Severity } from '../../core/types';
+import { SecurityFinding, ScannerExecutionResult, ScanOptions } from '../../core/types';
 import { generateFingerprint } from '../../core/fingerprint';
+import { ScopeManager, ScopeEnforcedHttpClient } from '../../core/scope';
 
 export class SafeDASTScanner extends BaseScanner {
   public readonly id = 'sentinel-safe-dast';
@@ -60,9 +59,38 @@ export class SafeDASTScanner extends BaseScanner {
       };
     }
 
+    const authorizedScope = options.dastOptions.authorizedScope || [targetUrl.hostname];
+    const scopeManager = new ScopeManager({
+      targetOrigin: targetUrl.origin,
+      authorizedHostnames: authorizedScope,
+      permitActiveTesting: true
+    });
+    const httpClient = new ScopeEnforcedHttpClient(scopeManager);
+
     try {
       // 1. Probe Baseline Headers & Security Controls (Strictly Safe)
-      const baseRes = await this.performHttpRequest(targetUrl, 'GET');
+      let baseRes;
+      try {
+        baseRes = await httpClient.request(targetUrl.href, {
+          method: 'GET',
+          isActiveTest: true,
+          timeoutMs: 10000,
+          allowRealExternalTargets: false // Enforce safety: do not scan real external targets
+        });
+      } catch (reqErr: any) {
+        return {
+          findings: [],
+          executionResult: {
+            scannerId: this.id,
+            scannerName: this.name,
+            version: await this.getVersion(),
+            status: 'FAILED',
+            executionTimeMs: Date.now() - startTime,
+            findingsCount: 0,
+            errorMessage: `Scope or target request blocked: ${reqErr.message}`
+          }
+        };
+      }
 
       if (!baseRes.headers) {
         return {
@@ -173,7 +201,18 @@ export class SafeDASTScanner extends BaseScanner {
       const probeUrl = new URL(targetUrlStr);
       probeUrl.searchParams.set('q', `<${canaryToken}>`);
 
-      const probeRes = await this.performHttpRequest(probeUrl, 'GET');
+      let probeRes: { body?: string } = { body: '' };
+      try {
+        probeRes = await httpClient.request(probeUrl.href, {
+          method: 'GET',
+          isActiveTest: true,
+          timeoutMs: 10000,
+          allowRealExternalTargets: false
+        });
+      } catch (probeErr: any) {
+        // Safe probe request blocked or non-fatal
+      }
+
       if (probeRes.body && probeRes.body.includes(`<${canaryToken}>`)) {
         // Reflected canary without HTML escaping detected!
         const fingerprint = generateFingerprint('DAST_DYNAMIC_FINDING', 'DAST-XSS-REFLECTED', targetUrl.origin, 1, probeUrl.pathname);
@@ -231,43 +270,5 @@ export class SafeDASTScanner extends BaseScanner {
         }
       };
     }
-  }
-
-  private performHttpRequest(target: URL, method: string): Promise<{ statusCode?: number; headers?: http.IncomingHttpHeaders; body: string }> {
-    return new Promise((resolve) => {
-      const isHttps = target.protocol === 'https:';
-      const client = isHttps ? https : http;
-
-      const req = client.request(
-        target,
-        {
-          method,
-          timeout: 10000,
-          headers: {
-            'User-Agent': 'Sentinel-Security-DAST/1.0 (Authorized Audit Probe)'
-          }
-        },
-        (res) => {
-          let body = '';
-          res.on('data', chunk => {
-            if (body.length < 500000) body += chunk.toString('utf8');
-          });
-          res.on('end', () => {
-            resolve({ statusCode: res.statusCode, headers: res.headers, body });
-          });
-        }
-      );
-
-      req.on('error', () => {
-        resolve({ body: '' });
-      });
-
-      req.on('timeout', () => {
-        req.destroy();
-        resolve({ body: '' });
-      });
-
-      req.end();
-    });
   }
 }

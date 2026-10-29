@@ -13,6 +13,7 @@ import { RuleBasedRemediationEngine } from './ai/rule-remediation';
 import { FixVerificationEngine } from './fixes/engine';
 import { ScanResult, SecurityFinding } from './core/types';
 import { SentinelSidebarWebviewProvider } from './ui/sidebar-webview-provider';
+import { SentinelSecurityAgent } from './ai/agent/security-agent';
 import { logger } from './utils/logger';
 
 let lastScanResult: ScanResult | null = null;
@@ -264,6 +265,151 @@ export function activate(context: vscode.ExtensionContext) {
     );
   });
 
+  // Command: Consult AI Security Agent
+  const consultAgentCommand = vscode.commands.registerCommand('sentinel.consultAgent', async () => {
+    const config = vscode.workspace.getConfiguration('sentinel');
+    const endpoint = config.get<string>('ollama.endpoint') || 'http://127.0.0.1:11434';
+    const model = config.get<string>('ollama.model') || 'llama3';
+    const agent = new SentinelSecurityAgent({ ollamaEndpoint: endpoint, ollamaModel: model });
+
+    const query = await vscode.window.showInputBox({
+      prompt: 'Ask the Sentinel AI Security Agent (e.g. "How should I sanitize DOM XSS in React?")',
+      placeHolder: 'Enter question about security posture, exploit vectors, or mitigations...'
+    });
+    if (!query) return;
+
+    await vscode.window.withProgress(
+      {
+        location: vscode.ProgressLocation.Notification,
+        title: 'Sentinel AI Agent: Analyzing security context...',
+        cancellable: false
+      },
+      async () => {
+        const response = await agent.consultAgent(query);
+        const doc = await vscode.workspace.openTextDocument({
+          content: response,
+          language: 'markdown'
+        });
+        await vscode.window.showTextDocument(doc, { preview: true, viewColumn: vscode.ViewColumn.Beside });
+      }
+    );
+  });
+
+  // Command: Run AI Agent Investigation on Finding
+  const investigateAgentCommand = vscode.commands.registerCommand('sentinel.investigateWithAgent', async (finding?: SecurityFinding) => {
+    let targetFinding = finding;
+    if (!targetFinding && lastScanResult && lastScanResult.findings.length > 0) {
+      const items = lastScanResult.findings.map(f => ({
+        label: `[${f.severity}] ${f.title}`,
+        description: `${f.evidence.location.filePath}:${f.evidence.location.startLine}`,
+        finding: f
+      }));
+      const picked = await vscode.window.showQuickPick(items, {
+        placeHolder: 'Select a finding to investigate with the AI Security Agent'
+      });
+      if (picked) targetFinding = picked.finding;
+    }
+
+    if (!targetFinding) {
+      vscode.window.showWarningMessage('Sentinel Security: No finding selected to investigate.');
+      return;
+    }
+
+    const config = vscode.workspace.getConfiguration('sentinel');
+    const endpoint = config.get<string>('ollama.endpoint') || 'http://127.0.0.1:11434';
+    const model = config.get<string>('ollama.model') || 'llama3';
+    const agent = new SentinelSecurityAgent({ ollamaEndpoint: endpoint, ollamaModel: model });
+
+    await vscode.window.withProgress(
+      {
+        location: vscode.ProgressLocation.Notification,
+        title: `Sentinel AI Agent: Investigating [${targetFinding.ruleId}] ${targetFinding.title}...`,
+        cancellable: false
+      },
+      async () => {
+        const report = await agent.investigateFinding(targetFinding!);
+        const mdReport = `# 🛡️ Sentinel AI Agent Investigation Report
+**Investigation ID:** \`${report.investigationId}\`  
+**Timestamp:** ${report.timestamp}  
+**Engine:** ${report.executionModel}  
+**Target:** \`${targetFinding!.evidence.location.filePath}:${targetFinding!.evidence.location.startLine}\`  
+**Severity:** **${targetFinding!.severity}** | **Rule:** \`${targetFinding!.ruleId}\`
+
+---
+
+## 🎯 1. Attack Vector Hypothesis
+- **Vulnerability:** ${report.hypothesis.vulnerabilityType}
+- **Confidence:** \`${report.hypothesis.confidence}\`
+- **Threat Actor:** ${report.hypothesis.threatActorModel}
+- **Attack Vector:** ${report.hypothesis.attackVector}
+- **Exploit Preconditions:**
+${report.hypothesis.exploitPreconditions.map(p => `  - ${p}`).join('\n')}
+- **Expected Impact:** ${report.hypothesis.expectedImpact}
+
+---
+
+## 🔍 2. Non-Destructive Verification Steps
+${report.verificationSteps.map(s => `### Step ${s.stepNumber}: ${s.action}
+- **Tool:** \`${s.toolName}\` | **Status:** \`${s.status}\`
+- **Observation:** ${s.observation}`).join('\n\n')}
+
+---
+
+## ⚖️ 3. Agent Triage Verdict
+- **Verdict:** **\`${report.verdict.verdict}\`**
+- **Explanation:** ${report.verdict.explanation}
+- **Mitigating Controls Found:** ${report.verdict.mitigatingControlsFound.length > 0 ? report.verdict.mitigatingControlsFound.join(', ') : 'None'}
+- **Audit Notes:** ${report.verdict.auditNotes}
+
+---
+
+## 🛠️ 4. Remediation Plan & Regression Test
+**Summary:** ${report.remediation.remediationSummary}
+
+### Proposed Patch:
+\`\`\`diff
+${report.remediation.patchDiff}
+\`\`\`
+
+### Generated Regression Unit Test:
+\`\`\`typescript
+${report.remediation.regressionTestCode}
+\`\`\`
+`;
+        const doc = await vscode.workspace.openTextDocument({
+          content: mdReport,
+          language: 'markdown'
+        });
+        await vscode.window.showTextDocument(doc, { preview: true, viewColumn: vscode.ViewColumn.Beside });
+      }
+    );
+  });
+
+  // Command: Generate Regression Test
+  const generateTestCommand = vscode.commands.registerCommand('sentinel.generateRegressionTest', async (finding?: SecurityFinding) => {
+    let targetFinding = finding;
+    if (!targetFinding && lastScanResult && lastScanResult.findings.length > 0) {
+      const items = lastScanResult.findings.map(f => ({
+        label: `[${f.severity}] ${f.title}`,
+        description: `${f.evidence.location.filePath}:${f.evidence.location.startLine}`,
+        finding: f
+      }));
+      const picked = await vscode.window.showQuickPick(items, {
+        placeHolder: 'Select finding to generate regression test'
+      });
+      if (picked) targetFinding = picked.finding;
+    }
+
+    if (!targetFinding) return;
+    const agent = new SentinelSecurityAgent();
+    const testCode = agent.generateRegressionTest(targetFinding);
+    const doc = await vscode.workspace.openTextDocument({
+      content: testCode,
+      language: 'typescript'
+    });
+    await vscode.window.showTextDocument(doc, { preview: true, viewColumn: vscode.ViewColumn.Beside });
+  });
+
   context.subscriptions.push(
     fullScanCommand,
     openDashboardCommand,
@@ -272,6 +418,9 @@ export function activate(context: vscode.ExtensionContext) {
     showGuidanceCommand,
     applyFixCommand,
     dastCommand,
+    consultAgentCommand,
+    investigateAgentCommand,
+    generateTestCommand,
     diagnosticsManager
   );
 

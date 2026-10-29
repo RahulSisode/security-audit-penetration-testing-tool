@@ -72,6 +72,24 @@
         "title": "Sentinel: Run Authorized DAST Probe",
         "icon": "$(pulse)",
         "category": "Sentinel Security"
+      },
+      {
+        "command": "sentinel.consultAgent",
+        "title": "Sentinel: Consult AI Security Agent",
+        "icon": "$(hubot)",
+        "category": "Sentinel Security"
+      },
+      {
+        "command": "sentinel.investigateWithAgent",
+        "title": "Sentinel: Run AI Agent Investigation on Finding",
+        "icon": "$(search-fuzzy)",
+        "category": "Sentinel Security"
+      },
+      {
+        "command": "sentinel.generateRegressionTest",
+        "title": "Sentinel: Generate Regression Unit Test",
+        "icon": "$(beaker)",
+        "category": "Sentinel Security"
       }
     ],
     "viewsContainers": {

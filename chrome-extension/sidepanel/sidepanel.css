@@ -327,3 +327,25 @@ body {
   border-radius: 4px;
 }
 .defense-desc { font-size: 10px; color: var(--text-muted); }
+
+/* AI Agent Panel */
+.agent-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.agent-header-card {
+  background: linear-gradient(135deg, rgba(188, 140, 255, 0.12), rgba(22, 27, 34, 0.9));
+  border: 1px solid rgba(188, 140, 255, 0.35);
+  border-radius: 6px;
+  padding: 12px;
+}
+.agent-badge {
+  font-size: 9px;
+  font-weight: 700;
+  padding: 2px 7px;
+  border-radius: 4px;
+  background: rgba(188, 140, 255, 0.15);
+  color: #bc8cff;
+  border: 1px solid rgba(188, 140, 255, 0.3);
+}

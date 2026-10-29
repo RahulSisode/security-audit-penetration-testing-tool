@@ -3,6 +3,7 @@ import * as path from 'path';
 import { ScanResult, SecurityFinding, Severity } from '../core/types';
 import { FixVerificationEngine } from '../fixes/engine';
 import { RuleBasedRemediationEngine } from '../ai/rule-remediation';
+import { SentinelSecurityAgent } from '../ai/agent/security-agent';
 
 export class SentinelSidebarWebviewProvider implements vscode.WebviewViewProvider {
   public static readonly viewType = 'sentinelSidebarView';
@@ -62,6 +63,41 @@ export class SentinelSidebarWebviewProvider implements vscode.WebviewViewProvide
             }
           }
           break;
+        case 'investigateAgent':
+          if (this.currentResult) {
+            const finding = this.currentResult.findings.find(f => f.fingerprint === data.fingerprint) || this.currentResult.findings[0];
+            if (finding) {
+              vscode.commands.executeCommand('sentinel.investigateWithAgent', finding);
+            }
+          } else {
+            vscode.commands.executeCommand('sentinel.investigateWithAgent');
+          }
+          break;
+        case 'generateTest':
+          if (this.currentResult) {
+            const finding = this.currentResult.findings.find(f => f.fingerprint === data.fingerprint) || this.currentResult.findings[0];
+            if (finding) {
+              vscode.commands.executeCommand('sentinel.generateRegressionTest', finding);
+            }
+          }
+          break;
+        case 'consultAgent': {
+          const config = vscode.workspace.getConfiguration('sentinel');
+          const endpoint = config.get<string>('ollama.endpoint') || 'http://127.0.0.1:11434';
+          const model = config.get<string>('ollama.model') || 'llama3';
+          const agent = new SentinelSecurityAgent({ ollamaEndpoint: endpoint, ollamaModel: model });
+          let targetFinding: SecurityFinding | undefined;
+          if (data.fingerprint && this.currentResult) {
+            targetFinding = this.currentResult.findings.find(f => f.fingerprint === data.fingerprint);
+          } else if (this.currentResult && this.currentResult.findings.length > 0) {
+            targetFinding = this.currentResult.findings[0];
+          }
+          const reply = await agent.consultAgent(data.query, targetFinding);
+          if (this._view) {
+            this._view.webview.postMessage({ action: 'agentReply', text: reply });
+          }
+          break;
+        }
       }
     });
   }
@@ -538,7 +574,8 @@ export class SentinelSidebarWebviewProvider implements vscode.WebviewViewProvide
   <!-- View Mode Tabs -->
   <div class="tab-bar">
     <button class="tab-item active" id="tabFindingsBtn" onclick="switchView('findings')">Findings (${findings.length})</button>
-    <button class="tab-item" id="tabDefensesBtn" onclick="switchView('defenses')">Applied Defenses (${appliedDefenses.length})</button>
+    <button class="tab-item" id="tabAgentBtn" onclick="switchView('agent')">🤖 AI Agent</button>
+    <button class="tab-item" id="tabDefensesBtn" onclick="switchView('defenses')">Defenses (${appliedDefenses.length})</button>
   </div>
 
   <!-- View 1: Findings Stream -->
@@ -583,9 +620,10 @@ export class SentinelSidebarWebviewProvider implements vscode.WebviewViewProvide
               <div class="code-preview" onclick="openFile('${f.evidence.location.filePath}', ${f.evidence.location.startLine})">${f.evidence.redactedSnippet || f.evidence.snippet}</div>
             ` : ''}
             <div class="card-actions">
-              ${f.proposedFix ? `<button class="btn-action btn-fix" onclick="applyFix('${f.fingerprint}')">⚡ Quick Fix</button>` : ''}
-              <button class="btn-action" onclick="showGuidance('${f.fingerprint}')">📖 Guidance</button>
-              <button class="btn-action" onclick="openFile('${f.evidence.location.filePath}', ${f.evidence.location.startLine})">🔍 View</button>
+              <button class="btn-action" style="color: #bc8cff; border-color: rgba(188,140,255,0.4);" onclick="investigateAgent('${f.fingerprint}')" title="AI Agent Investigation">🤖 Agent</button>
+              ${f.proposedFix ? `<button class="btn-action btn-fix" onclick="applyFix('${f.fingerprint}')">⚡ Fix</button>` : ''}
+              <button class="btn-action" onclick="generateTest('${f.fingerprint}')" title="Synthesize Unit Test">🧪 Test</button>
+              <button class="btn-action" onclick="showGuidance('${f.fingerprint}')">📖 Guide</button>
             </div>
           </div>
         `;
@@ -593,7 +631,47 @@ export class SentinelSidebarWebviewProvider implements vscode.WebviewViewProvide
     </div>
   </div>
 
-  <!-- View 2: Applied Defenses -->
+  <!-- View 2: AI Security Agent Triage -->
+  <div id="agentView" class="view-panel">
+    <div style="display:flex; flex-direction:column; gap:8px;">
+      <div style="background: linear-gradient(135deg, rgba(188,140,255,0.15), rgba(20,22,28,0.9)); border: 1px solid rgba(188,140,255,0.4); border-radius: 6px; padding: 10px;">
+        <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 6px;">
+          <span style="font-size: 20px;">🤖</span>
+          <div>
+            <div style="font-weight: 700; font-size: 12px; color: #fff;">Sentinel Autonomous Agent</div>
+            <div style="font-size: 10px; color: #bc8cff;">Strix-Inspired Security Reasoner</div>
+          </div>
+        </div>
+        <div style="display: flex; gap: 4px; flex-wrap: wrap;">
+          <span style="font-size: 9px; padding: 2px 6px; border-radius: 4px; background: rgba(63,185,80,0.2); color: #3fb950; border: 1px solid #3fb950;">Zero-API Offline Safe</span>
+          <span style="font-size: 9px; padding: 2px 6px; border-radius: 4px; background: rgba(88,166,255,0.2); color: #58a6ff; border: 1px solid #58a6ff;">Ollama Ready</span>
+        </div>
+      </div>
+
+      <div style="display: flex; gap: 6px;">
+        <button class="quick-btn" style="flex:1; border-color: rgba(188,140,255,0.5); color: #bc8cff;" onclick="investigateAgent('')">🎯 Investigate Top</button>
+        <button class="quick-btn" style="flex:1;" onclick="generateTest('')">🧪 Synthesize Test</button>
+      </div>
+
+      <div style="display: flex; gap: 4px; margin-top: 4px;">
+        <input type="text" id="agentQueryInput" class="search-box" style="margin-bottom:0;" placeholder="Ask agent (e.g. How to mitigate XSS?)..." onkeydown="if(event.key==='Enter') sendAgentQuery()">
+        <button class="quick-btn" style="background: var(--btn-primary); color: #fff; border:none; padding: 0 10px;" onclick="sendAgentQuery()">Ask</button>
+      </div>
+
+      <div id="agentResponseArea" style="background: #0d1117; border: 1px solid var(--border); border-radius: 6px; padding: 10px; font-size: 11px; max-height: calc(100vh - 380px); overflow-y: auto;">
+        <div style="color: var(--text-muted);">
+          <p style="font-weight: 600; color: #fff; margin: 0 0 4px 0;">🛡️ Autonomous Agent Workflow:</p>
+          • <strong>Hypothesis:</strong> Attack vector & exploit preconditions<br>
+          • <strong>Verification:</strong> AST structure & non-destructive check<br>
+          • <strong>Triage:</strong> Filter false positives & verify framework guards<br>
+          • <strong>Remediation:</strong> Deterministic patch & Mocha regression test<br>
+          • <strong>Scope Guard:</strong> Strict local target authorization
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- View 3: Applied Defenses -->
   <div id="defensesView" class="view-panel">
     <div class="defenses-container">
       ${appliedDefenses.map(d => `
@@ -620,11 +698,33 @@ export class SentinelSidebarWebviewProvider implements vscode.WebviewViewProvide
     function openFile(filePath, line) { vscode.postMessage({ action: 'openFile', filePath, line }); }
     function applyFix(fingerprint) { vscode.postMessage({ action: 'applyFix', fingerprint }); }
     function showGuidance(fingerprint) { vscode.postMessage({ action: 'showGuidance', fingerprint }); }
+    function investigateAgent(fingerprint) { vscode.postMessage({ action: 'investigateAgent', fingerprint }); }
+    function generateTest(fingerprint) { vscode.postMessage({ action: 'generateTest', fingerprint }); }
+
+    function sendAgentQuery() {
+      const input = document.getElementById('agentQueryInput');
+      const query = (input.value || '').trim();
+      if (!query) return;
+      input.value = '';
+      const area = document.getElementById('agentResponseArea');
+      area.innerHTML = '<div style="color: #79c0ff;">🤖 Agent analyzing question with scope guard...</div>';
+      vscode.postMessage({ action: 'consultAgent', query });
+    }
+
+    window.addEventListener('message', event => {
+      const message = event.data;
+      if (message.action === 'agentReply') {
+        const area = document.getElementById('agentResponseArea');
+        area.innerHTML = '<div style="color:#e6edf3; white-space:pre-wrap;">' + message.text + '</div>';
+      }
+    });
 
     function switchView(viewName) {
       document.getElementById('tabFindingsBtn').classList.toggle('active', viewName === 'findings');
+      document.getElementById('tabAgentBtn').classList.toggle('active', viewName === 'agent');
       document.getElementById('tabDefensesBtn').classList.toggle('active', viewName === 'defenses');
       document.getElementById('findingsView').classList.toggle('active', viewName === 'findings');
+      document.getElementById('agentView').classList.toggle('active', viewName === 'agent');
       document.getElementById('defensesView').classList.toggle('active', viewName === 'defenses');
     }
 

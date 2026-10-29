@@ -19,43 +19,62 @@ document.addEventListener('DOMContentLoaded', async () => {
   const defensesListEl = document.getElementById('defensesList');
 
   const tabVulnsBtn = document.getElementById('tabVulnsBtn');
+  const tabAgentBtn = document.getElementById('tabAgentBtn');
   const tabDefensesBtn = document.getElementById('tabDefensesBtn');
   const tabEndpointsBtn = document.getElementById('tabEndpointsBtn');
   const vulnView = document.getElementById('vulnView');
+  const agentView = document.getElementById('agentView');
   const defensesView = document.getElementById('defensesView');
   const endpointsView = document.getElementById('endpointsView');
   const endpointsListEl = document.getElementById('endpointsList');
   const endpointCountEl = document.getElementById('endpointCount');
+  const agentQueryInput = document.getElementById('agentQueryInput');
+  const agentQueryBtn = document.getElementById('agentQueryBtn');
+  const agentQueryReply = document.getElementById('agentQueryReply');
+  const scopeStatusBadge = document.getElementById('scopeStatusBadge');
 
   let currentResult = null;
 
+  function switchTab(activeBtn, activePanel) {
+    [tabVulnsBtn, tabAgentBtn, tabDefensesBtn, tabEndpointsBtn].forEach(b => b && b.classList.remove('active'));
+    [vulnView, agentView, defensesView, endpointsView].forEach(p => p && p.classList.remove('active'));
+    if (activeBtn) activeBtn.classList.add('active');
+    if (activePanel) activePanel.classList.add('active');
+  }
+
   // Tab switching
-  tabVulnsBtn.addEventListener('click', () => {
-    tabVulnsBtn.classList.add('active');
-    tabDefensesBtn.classList.remove('active');
-    if (tabEndpointsBtn) tabEndpointsBtn.classList.remove('active');
-    vulnView.classList.add('active');
-    defensesView.classList.remove('active');
-    if (endpointsView) endpointsView.classList.remove('active');
-  });
+  tabVulnsBtn.addEventListener('click', () => switchTab(tabVulnsBtn, vulnView));
+  if (tabAgentBtn) tabAgentBtn.addEventListener('click', () => switchTab(tabAgentBtn, agentView));
+  tabDefensesBtn.addEventListener('click', () => switchTab(tabDefensesBtn, defensesView));
+  if (tabEndpointsBtn) tabEndpointsBtn.addEventListener('click', () => switchTab(tabEndpointsBtn, endpointsView));
 
-  tabDefensesBtn.addEventListener('click', () => {
-    tabDefensesBtn.classList.add('active');
-    tabVulnsBtn.classList.remove('active');
-    if (tabEndpointsBtn) tabEndpointsBtn.classList.remove('active');
-    defensesView.classList.add('active');
-    vulnView.classList.remove('active');
-    if (endpointsView) endpointsView.classList.remove('active');
-  });
+  // AI Agent Consultation handler
+  if (agentQueryBtn && agentQueryInput) {
+    const handleConsult = async () => {
+      const q = (agentQueryInput.value || '').trim();
+      if (!q) return;
+      agentQueryReply.style.display = 'block';
+      agentQueryReply.innerHTML = '<span style="color:#58a6ff;">🤖 Analyzing query with scope guard...</span>';
+      try {
+        const topFinding = currentResult?.findings?.[0];
+        const res = await chrome.runtime.sendMessage({
+          action: 'agentConsult',
+          query: q,
+          finding: topFinding
+        });
+        if (res && res.answer) {
+          agentQueryReply.innerHTML = '<div style="white-space:pre-wrap; color:#e6edf3;">' + escapeHtml(res.answer) + '</div>';
+        } else {
+          agentQueryReply.textContent = 'Agent responded with empty answer.';
+        }
+      } catch (err) {
+        agentQueryReply.textContent = 'Error: ' + err.message;
+      }
+    };
 
-  if (tabEndpointsBtn) {
-    tabEndpointsBtn.addEventListener('click', () => {
-      tabEndpointsBtn.classList.add('active');
-      tabVulnsBtn.classList.remove('active');
-      tabDefensesBtn.classList.remove('active');
-      if (endpointsView) endpointsView.classList.add('active');
-      vulnView.classList.remove('active');
-      defensesView.classList.remove('active');
+    agentQueryBtn.addEventListener('click', handleConsult);
+    agentQueryInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') handleConsult();
     });
   }
 
@@ -224,13 +243,30 @@ document.addEventListener('DOMContentLoaded', async () => {
           <div class="remed-text">💡 <strong>Remediation:</strong> ${escapeHtml(f.remediation || 'Remediation guidance available')}</div>
           <div style="display:flex; justify-content:space-between; align-items:center; margin-top:6px;">
             <span style="font-size:9px; color:#8b949e;">${f.cwe || 'CWE-693'}</span>
-            <button class="btn-copy-report" data-finding-id="${f.id}" style="font-size:9px; padding:2px 6px; background:#21262d; border:1px solid #30363d; border-radius:4px; color:#58a6ff; cursor:pointer;">
-              📋 Copy Report
-            </button>
+            <div style="display:flex; gap:4px;">
+              <button class="btn-investigate-agent" data-finding-id="${f.id}" style="font-size:9px; padding:2px 6px; background:#1f1633; border:1px solid #bc8cff44; border-radius:4px; color:#bc8cff; cursor:pointer;">
+                🤖 AI Investigate
+              </button>
+              <button class="btn-copy-report" data-finding-id="${f.id}" style="font-size:9px; padding:2px 6px; background:#21262d; border:1px solid #30363d; border-radius:4px; color:#58a6ff; cursor:pointer;">
+                📋 Copy Report
+              </button>
+            </div>
           </div>
         </div>
       `).join('');
     }
+
+    // Attach AI Investigate click handler
+    findingsListEl.querySelectorAll('.btn-investigate-agent').forEach(btn => {
+      btn.addEventListener('click', async (e) => {
+        e.stopPropagation();
+        const fId = btn.getAttribute('data-finding-id');
+        const finding = (currentResult?.findings || []).find(f => f.id === fId);
+        if (finding) {
+          triggerAgentInvestigation(finding);
+        }
+      });
+    });
 
     // Attach copy report click handler
     findingsListEl.querySelectorAll('.btn-copy-report').forEach(btn => {
@@ -336,6 +372,53 @@ document.addEventListener('DOMContentLoaded', async () => {
         </div>
       </div>
     `).join('');
+  }
+
+  async function triggerAgentInvestigation(finding) {
+    switchTab(tabAgentBtn, agentView);
+    const hypoSummary = document.getElementById('agentHypoSummary');
+    const verifSection = document.getElementById('agentVerificationSection');
+    const stepsContent = document.getElementById('agentStepsContent');
+    const remedSection = document.getElementById('agentRemediationSection');
+    const remedDiff = document.getElementById('agentRemediationDiff');
+
+    hypoSummary.innerHTML = '<span style="color:#58a6ff;">🤖 Formulating attack hypothesis and non-destructive checks...</span>';
+    verifSection.style.display = 'none';
+    remedSection.style.display = 'none';
+
+    try {
+      const res = await chrome.runtime.sendMessage({
+        action: 'agentInvestigate',
+        finding
+      });
+
+      if (res && res.success) {
+        hypoSummary.innerHTML = `
+          <strong>${escapeHtml(res.hypothesis.vulnerabilityType)}</strong> (${res.hypothesis.confidence})<br>
+          <span style="color:#8b949e;">Threat:</span> ${escapeHtml(res.hypothesis.threatActorModel)}<br>
+          <span style="color:#8b949e;">Vector:</span> ${escapeHtml(res.hypothesis.attackVector)}<br>
+          <span style="color:#8b949e;">Impact:</span> ${escapeHtml(res.hypothesis.expectedImpact)}
+        `;
+
+        if (res.steps && res.steps.length > 0) {
+          verifSection.style.display = 'block';
+          stepsContent.innerHTML = res.steps.map(s => `
+            <div style="margin-bottom:4px;">
+              <span style="color:#3fb950;">✓ Step ${s.step} [${s.tool}]:</span> ${escapeHtml(s.observation)}
+            </div>
+          `).join('');
+        }
+
+        if (res.remediation) {
+          remedSection.style.display = 'block';
+          remedDiff.textContent = res.remediation.diff + '\n\n// Regression Unit Test:\n' + res.remediation.testCode;
+        }
+      } else {
+        hypoSummary.textContent = 'Agent investigation failed: ' + (res?.error || 'Unknown error');
+      }
+    } catch (err) {
+      hypoSummary.textContent = 'Error contacting agent: ' + err.message;
+    }
   }
 
   function escapeHtml(str) {

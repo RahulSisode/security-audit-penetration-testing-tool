@@ -47,6 +47,7 @@
     <!-- Mode Tabs -->
     <div class="tab-nav">
       <button class="nav-tab active" id="sideTabVulns">Vulnerabilities (<span id="countAll">0</span>)</button>
+      <button class="nav-tab" id="sideTabAgent">🤖 AI Agent</button>
       <button class="nav-tab" id="sideTabDefenses">Applied Defenses (<span id="sideDefenseCount">6</span>)</button>
       <button class="nav-tab" id="sideTabEndpoints">API Surface (<span id="sideEndpointCount">0</span>)</button>
     </div>
@@ -93,7 +94,51 @@
       </div>
     </div>
 
-    <!-- View 2: Applied Defenses View -->
+    <!-- View 2: AI Agent Triage View -->
+    <div id="sideAgentView" class="view-panel">
+      <div class="agent-panel">
+        <div class="agent-header-card">
+          <div style="display:flex; justify-content:space-between; align-items:center;">
+            <div style="display:flex; align-items:center; gap:8px;">
+              <span style="font-size:22px;">🤖</span>
+              <div>
+                <div style="font-weight:700; color:#fff; font-size:13px;">Sentinel Autonomous Agent</div>
+                <div style="font-size:10.5px; color:#bc8cff;">Strix-Inspired Threat Modeling & Verification</div>
+              </div>
+            </div>
+            <div style="display:flex; gap:4px;">
+              <span class="agent-badge">Zero-API Offline Safe</span>
+              <span class="agent-badge">Local Ollama Ready</span>
+            </div>
+          </div>
+        </div>
+
+        <div id="sideAgentAnalysisContainer" style="background:#161b22; border:1px solid #30363d; border-radius:6px; padding:12px; margin-top:10px;">
+          <div style="font-weight:600; color:#58a6ff; font-size:12px; margin-bottom:6px;">🎯 Autonomous Threat Hypothesis</div>
+          <div id="sideAgentHypoSummary" style="font-size:11.5px; color:#c9d1d9;">Select any finding or click "🤖 AI Investigate" to generate an attack hypothesis and non-destructive verification trace.</div>
+          
+          <div id="sideAgentVerificationSection" style="margin-top:10px; display:none;">
+            <div style="font-weight:600; color:#3fb950; font-size:11.5px; margin-bottom:6px;">🔍 Non-Destructive Verification Steps</div>
+            <div id="sideAgentStepsContent" style="font-size:11px; color:#8b949e;"></div>
+          </div>
+
+          <div id="sideAgentRemediationSection" style="margin-top:10px; display:none;">
+            <div style="font-weight:600; color:#bc8cff; font-size:11.5px; margin-bottom:6px;">🛠️ Synthesized Patch & Regression Test</div>
+            <pre id="sideAgentRemediationDiff" style="background:#0d1117; padding:8px; border-radius:4px; font-size:10.5px; color:#79c0ff; overflow-x:auto;"></pre>
+          </div>
+        </div>
+
+        <div style="margin-top:10px;">
+          <div style="display:flex; gap:6px;">
+            <input type="text" id="sideAgentQueryInput" class="search-input" style="margin:0; padding:8px 12px; font-size:12px; flex:1;" placeholder="Ask agent (e.g. How to prevent DOM XSS here?)...">
+            <button id="sideAgentQueryBtn" class="btn-primary" style="padding:8px 16px; font-size:12px;">Ask</button>
+          </div>
+          <div id="sideAgentQueryReply" style="margin-top:8px; font-size:11.5px; color:#e6edf3; background:#0d1117; border:1px solid #30363d; border-radius:6px; padding:10px; max-height:180px; overflow-y:auto; display:none; white-space:pre-wrap;"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- View 3: Applied Defenses View -->
     <div id="sideDefensesView" class="view-panel">
       <div id="sideDefensesList" class="defenses-container">
         <!-- Injected dynamically -->

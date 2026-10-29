@@ -467,6 +467,9 @@ export class HTMLExporter {
       <button class="tab-btn" onclick="switchTab('iac', this)">
         ☁️ Cloud & IaC <span class="tab-count">${iacFindings.length}</span>
       </button>
+      <button class="tab-btn" onclick="switchTab('agent', this)">
+        🤖 AI Agent Triage <span class="tab-count">${findings.length}</span>
+      </button>
       <button class="tab-btn" onclick="switchTab('coverage', this)">
         ⚙️ Engine Status <span class="tab-count">${c.scanners.length}</span>
       </button>
@@ -519,6 +522,46 @@ export class HTMLExporter {
       </div>
       <div class="findings-list">
         ${renderFindingCards(iacFindings)}
+      </div>
+    </div>
+
+    <!-- Tab 6: AI Agent Triage -->
+    <div id="tab-agent" class="tab-pane">
+      <div style="background: linear-gradient(135deg, rgba(188,140,255,0.12), rgba(20,22,28,0.9)); border: 1px solid rgba(188,140,255,0.3); border-radius: 8px; padding: 16px; margin-bottom: 16px;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+          <div style="display: flex; align-items: center; gap: 10px;">
+            <span style="font-size: 24px;">🤖</span>
+            <div>
+              <h3 style="margin: 0; color: #fff; font-size: 16px;">Sentinel Autonomous Security Agent</h3>
+              <p style="margin: 0; font-size: 12px; color: #bc8cff;">Strix-Inspired Threat Modeling, Verification & Triage</p>
+            </div>
+          </div>
+          <div style="display:flex; gap: 6px;">
+            <span style="font-size: 10px; padding: 3px 8px; border-radius: 12px; background: rgba(63,185,80,0.15); color: #3fb950; border: 1px solid #3fb950; font-weight:700;">Zero-API Local Sandbox</span>
+            <span style="font-size: 10px; padding: 3px 8px; border-radius: 12px; background: rgba(88,166,255,0.15); color: #58a6ff; border: 1px solid #58a6ff; font-weight:700;">Ollama Ready</span>
+          </div>
+        </div>
+        <p style="color: var(--text-muted); font-size: 13px; margin: 0 0 12px 0;">
+          The agent evaluates attack hypotheses, plans non-destructive AST and taint flow verifications, checks framework defenses, and synthesizes reproducible unit tests without contacting third-party APIs.
+        </p>
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 10px;">
+          <div style="background: #0d1117; border: 1px solid var(--border); border-radius: 6px; padding: 10px;">
+            <div style="font-weight: 700; color: #79c0ff; font-size: 12px;">1. Attack Hypothesis</div>
+            <div style="font-size: 11px; color: var(--text-muted); margin-top: 4px;">Generates exploit preconditions, threat models, and blast radius impact.</div>
+          </div>
+          <div style="background: #0d1117; border: 1px solid var(--border); border-radius: 6px; padding: 10px;">
+            <div style="font-weight: 700; color: #3fb950; font-size: 12px;">2. Non-Destructive Checks</div>
+            <div style="font-size: 11px; color: var(--text-muted); margin-top: 4px;">Executes safe validation, verifies taint steps, and filters false positives.</div>
+          </div>
+          <div style="background: #0d1117; border: 1px solid var(--border); border-radius: 6px; padding: 10px;">
+            <div style="font-weight: 700; color: #bc8cff; font-size: 12px;">3. Test & Patch Synthesis</div>
+            <div style="font-size: 11px; color: var(--text-muted); margin-top: 4px;">Synthesizes clean code diffs and Mocha regression test suites.</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="findings-list">
+        ${renderFindingCards(findings)}
       </div>
     </div>
 
@@ -588,6 +631,8 @@ export class HTMLExporter {
     function openFile(filePath, line) { if (vscode) vscode.postMessage({ command: 'openFile', filePath, line }); }
     function applyFix(fingerprint) { if (vscode) vscode.postMessage({ command: 'applyFix', fingerprint }); }
     function showGuidance(fingerprint) { if (vscode) vscode.postMessage({ command: 'showGuidance', fingerprint }); }
+    function investigateAgent(fingerprint) { if (vscode) vscode.postMessage({ command: 'investigateAgent', fingerprint }); }
+    function generateTest(fingerprint) { if (vscode) vscode.postMessage({ command: 'generateTest', fingerprint }); }
 
     function switchTab(tabId, el) {
       document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
@@ -669,6 +714,8 @@ function renderFindingCards(findings: SecurityFinding[]): string {
         ` : ''}
 
         <div class="actions-bar">
+          <button class="btn-sm" style="color: #bc8cff; border-color: rgba(188,140,255,0.4);" onclick="investigateAgent('${f.fingerprint}')">🤖 AI Investigate</button>
+          <button class="btn-sm" onclick="generateTest('${f.fingerprint}')">🧪 Gen Test</button>
           ${f.proposedFix ? `<button class="btn-sm btn-fix" onclick="applyFix('${f.fingerprint}')">⚡ Apply & Verify Fix</button>` : ''}
           <button class="btn-sm" onclick="showGuidance('${f.fingerprint}')">📖 Full Guidance</button>
           <button class="btn-sm" onclick="openFile('${f.evidence.location.filePath}', ${f.evidence.location.startLine})">🔍 Open in Editor</button>

@@ -1,4 +1,7 @@
 import { auditWebEnvironment, discoverPassiveSubdomains } from './engine/scanner.js';
+import { ChromeSentinelAgent } from './engine/agent.js';
+
+const sentinelAgent = new ChromeSentinelAgent();
 
 /**
  * Validates target URL against SSRF and private network metadata exposure
@@ -33,6 +36,63 @@ function isValidHost(urlString) {
 }
 
 /**
+ * Scope and Redirect Safe Fetch Wrapper
+ * Prevents SSRF, re-validates redirects against authorized origin, and blocks scope escape.
+ */
+async function safeFetchWithScopeAndRedirect(url, options = {}, authorizedOrigin = null) {
+  if (!isValidHost(url)) {
+    throw new Error('Blocked: Target host is invalid, cloud metadata, or restricted.');
+  }
+
+  if (authorizedOrigin) {
+    try {
+      const targetHost = new URL(url).hostname.toLowerCase();
+      const authHost = new URL(authorizedOrigin).hostname.toLowerCase();
+      if (targetHost !== authHost) {
+        throw new Error(`Scope violation: Target ${targetHost} escaped authorized origin ${authHost}`);
+      }
+    } catch (e) {
+      throw new Error('Scope evaluation error: ' + e.message);
+    }
+  }
+
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), options.timeout || 4000);
+
+  try {
+    const resp = await fetch(url, {
+      ...options,
+      redirect: 'manual',
+      signal: controller.signal
+    });
+    clearTimeout(timeoutId);
+
+    // Handle redirects with strict scope re-validation
+    if ([301, 302, 303, 307, 308].includes(resp.status)) {
+      const loc = resp.headers.get('location');
+      if (loc) {
+        const resolvedLoc = new URL(loc, url).href;
+        if (!isValidHost(resolvedLoc)) {
+          throw new Error('Blocked redirect to unapproved or metadata destination: ' + resolvedLoc);
+        }
+        if (authorizedOrigin) {
+          const destHost = new URL(resolvedLoc).hostname.toLowerCase();
+          const authHost = new URL(authorizedOrigin).hostname.toLowerCase();
+          if (destHost !== authHost) {
+            throw new Error(`Scope violation: Redirect to ${destHost} escaped approved scope`);
+          }
+        }
+        return safeFetchWithScopeAndRedirect(resolvedLoc, options, authorizedOrigin);
+      }
+    }
+    return resp;
+  } catch (err) {
+    clearTimeout(timeoutId);
+    throw err;
+  }
+}
+
+/**
  * Fetch HTTP response headers for target URL
  */
 async function fetchHttpHeaders(targetUrl) {
@@ -40,32 +100,30 @@ async function fetchHttpHeaders(targetUrl) {
     return {};
   }
   const headers = {};
+  const origin = new URL(targetUrl).origin;
+
   try {
-    const resp = await fetch(targetUrl, {
+    const resp = await safeFetchWithScopeAndRedirect(targetUrl, {
       method: 'HEAD',
       cache: 'no-cache',
       credentials: 'omit'
-    });
+    }, origin);
     resp.headers.forEach((val, key) => {
       headers[key.toLowerCase()] = val;
     });
   } catch (err) {
-    // If HEAD is blocked or disallowed by server, fallback to quick GET
+    // If HEAD is blocked or disallowed by server, fallback to quick GET with scope enforcement
     try {
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 3500);
-      const resp = await fetch(targetUrl, {
+      const resp = await safeFetchWithScopeAndRedirect(targetUrl, {
         method: 'GET',
         cache: 'no-cache',
-        credentials: 'omit',
-        signal: controller.signal
-      });
-      clearTimeout(timeoutId);
+        credentials: 'omit'
+      }, origin);
       resp.headers.forEach((val, key) => {
         headers[key.toLowerCase()] = val;
       });
     } catch (fallbackErr) {
-      console.warn('Could not fetch headers for:', targetUrl, fallbackErr);
+      console.warn('Could not fetch headers with scope guard for:', targetUrl, fallbackErr.message);
     }
   }
   return headers;
@@ -327,6 +385,40 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     (async () => {
       const data = await chrome.storage.local.get('lastAuditResult');
       sendResponse(data.lastAuditResult || null);
+    })();
+    return true;
+  }
+
+  if (message.action === 'agentInvestigate') {
+    (async () => {
+      try {
+        const finding = message.finding;
+        const hypothesis = sentinelAgent.generateHypothesis(finding);
+        const steps = sentinelAgent.planVerificationSteps(finding);
+        const triage = sentinelAgent.triageFinding(finding);
+        const remediation = sentinelAgent.generateRemediation(finding);
+        sendResponse({
+          success: true,
+          hypothesis,
+          steps,
+          triage,
+          remediation
+        });
+      } catch (err) {
+        sendResponse({ success: false, error: err.message });
+      }
+    })();
+    return true;
+  }
+
+  if (message.action === 'agentConsult') {
+    (async () => {
+      try {
+        const answer = await sentinelAgent.consult(message.query, message.finding);
+        sendResponse({ success: true, answer });
+      } catch (err) {
+        sendResponse({ success: false, error: err.message });
+      }
     })();
     return true;
   }

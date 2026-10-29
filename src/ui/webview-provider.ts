@@ -79,6 +79,22 @@ export class SentinelDashboardPanel {
             }
           }
           break;
+        case 'investigateAgent':
+          if (this.result) {
+            const finding = this.result.findings.find(f => f.fingerprint === message.fingerprint);
+            vscode.commands.executeCommand('sentinel.investigateWithAgent', finding);
+          } else {
+            vscode.commands.executeCommand('sentinel.investigateWithAgent');
+          }
+          break;
+        case 'generateTest':
+          if (this.result) {
+            const finding = this.result.findings.find(f => f.fingerprint === message.fingerprint);
+            if (finding) {
+              vscode.commands.executeCommand('sentinel.generateRegressionTest', finding);
+            }
+          }
+          break;
         case 'askOllama':
           if (this.result) {
             const finding = this.result.findings.find(f => f.fingerprint === message.fingerprint);

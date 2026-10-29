@@ -19,44 +19,62 @@ document.addEventListener('DOMContentLoaded', async () => {
   const filterChips = document.querySelectorAll('.chip');
 
   const sideTabVulns = document.getElementById('sideTabVulns');
+  const sideTabAgent = document.getElementById('sideTabAgent');
   const sideTabDefenses = document.getElementById('sideTabDefenses');
   const sideTabEndpoints = document.getElementById('sideTabEndpoints');
   const sideFindingsView = document.getElementById('sideFindingsView');
+  const sideAgentView = document.getElementById('sideAgentView');
   const sideDefensesView = document.getElementById('sideDefensesView');
   const sideEndpointsView = document.getElementById('sideEndpointsView');
   const sideEndpointsListEl = document.getElementById('sideEndpointsList');
   const sideEndpointCountEl = document.getElementById('sideEndpointCount');
+  const sideAgentQueryInput = document.getElementById('sideAgentQueryInput');
+  const sideAgentQueryBtn = document.getElementById('sideAgentQueryBtn');
+  const sideAgentQueryReply = document.getElementById('sideAgentQueryReply');
 
   let currentResult = null;
   let activeFilter = 'ALL';
 
+  function switchSideTab(activeBtn, activePanel) {
+    [sideTabVulns, sideTabAgent, sideTabDefenses, sideTabEndpoints].forEach(b => b && b.classList.remove('active'));
+    [sideFindingsView, sideAgentView, sideDefensesView, sideEndpointsView].forEach(p => p && p.classList.remove('active'));
+    if (activeBtn) activeBtn.classList.add('active');
+    if (activePanel) activePanel.classList.add('active');
+  }
+
   // Tab switching
-  sideTabVulns.addEventListener('click', () => {
-    sideTabVulns.classList.add('active');
-    sideTabDefenses.classList.remove('active');
-    if (sideTabEndpoints) sideTabEndpoints.classList.remove('active');
-    sideFindingsView.classList.add('active');
-    sideDefensesView.classList.remove('active');
-    if (sideEndpointsView) sideEndpointsView.classList.remove('active');
-  });
+  sideTabVulns.addEventListener('click', () => switchSideTab(sideTabVulns, sideFindingsView));
+  if (sideTabAgent) sideTabAgent.addEventListener('click', () => switchSideTab(sideTabAgent, sideAgentView));
+  sideTabDefenses.addEventListener('click', () => switchSideTab(sideTabDefenses, sideDefensesView));
+  if (sideTabEndpoints) sideTabEndpoints.addEventListener('click', () => switchSideTab(sideTabEndpoints, sideEndpointsView));
 
-  sideTabDefenses.addEventListener('click', () => {
-    sideTabDefenses.classList.add('active');
-    sideTabVulns.classList.remove('active');
-    if (sideTabEndpoints) sideTabEndpoints.classList.remove('active');
-    sideDefensesView.classList.add('active');
-    sideFindingsView.classList.remove('active');
-    if (sideEndpointsView) sideEndpointsView.classList.remove('active');
-  });
+  // AI Agent Consultation handler
+  if (sideAgentQueryBtn && sideAgentQueryInput) {
+    const handleSideConsult = async () => {
+      const q = (sideAgentQueryInput.value || '').trim();
+      if (!q) return;
+      sideAgentQueryReply.style.display = 'block';
+      sideAgentQueryReply.innerHTML = '<span style="color:#58a6ff;">🤖 Analyzing query with scope guard...</span>';
+      try {
+        const topFinding = currentResult?.findings?.[0];
+        const res = await chrome.runtime.sendMessage({
+          action: 'agentConsult',
+          query: q,
+          finding: topFinding
+        });
+        if (res && res.answer) {
+          sideAgentQueryReply.textContent = res.answer;
+        } else {
+          sideAgentQueryReply.textContent = 'Agent responded with empty answer.';
+        }
+      } catch (err) {
+        sideAgentQueryReply.textContent = 'Error: ' + err.message;
+      }
+    };
 
-  if (sideTabEndpoints) {
-    sideTabEndpoints.addEventListener('click', () => {
-      sideTabEndpoints.classList.add('active');
-      sideTabVulns.classList.remove('active');
-      sideTabDefenses.classList.remove('active');
-      if (sideEndpointsView) sideEndpointsView.classList.add('active');
-      sideFindingsView.classList.remove('active');
-      sideDefensesView.classList.remove('active');
+    sideAgentQueryBtn.addEventListener('click', handleSideConsult);
+    sideAgentQueryInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') handleSideConsult();
     });
   }
 
@@ -242,13 +260,30 @@ document.addEventListener('DOMContentLoaded', async () => {
           </div>
           <div style="display:flex; justify-content:space-between; align-items:center; margin-top:8px;">
             <span style="font-size:10px; color:#8b949e;">${f.cwe || 'CWE-693'}</span>
-            <button class="btn-copy-report" data-finding-id="${f.id}" style="font-size:10px; padding:3px 8px; background:#21262d; border:1px solid #30363d; border-radius:4px; color:#58a6ff; cursor:pointer;">
-              📋 Copy Bug Bounty Report
-            </button>
+            <div style="display:flex; gap:6px;">
+              <button class="btn-side-agent-investigate" data-finding-id="${f.id}" style="font-size:10px; padding:3px 8px; background:#1f1633; border:1px solid #bc8cff44; border-radius:4px; color:#bc8cff; cursor:pointer;">
+                🤖 AI Investigate
+              </button>
+              <button class="btn-copy-report" data-finding-id="${f.id}" style="font-size:10px; padding:3px 8px; background:#21262d; border:1px solid #30363d; border-radius:4px; color:#58a6ff; cursor:pointer;">
+                📋 Copy Bug Bounty Report
+              </button>
+            </div>
           </div>
         </div>
       `).join('');
     }
+
+    // Attach AI Investigate click handler
+    sideFindingsListEl.querySelectorAll('.btn-side-agent-investigate').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const fId = btn.getAttribute('data-finding-id');
+        const finding = (currentResult?.findings || []).find(f => f.id === fId);
+        if (finding) {
+          triggerSideAgentInvestigation(finding);
+        }
+      });
+    });
 
     // Attach copy report click handler
     sideFindingsListEl.querySelectorAll('.btn-copy-report').forEach(btn => {
@@ -356,6 +391,53 @@ document.addEventListener('DOMContentLoaded', async () => {
         </div>
       </div>
     `).join('');
+  }
+
+  async function triggerSideAgentInvestigation(finding) {
+    switchSideTab(sideTabAgent, sideAgentView);
+    const hypoSummary = document.getElementById('sideAgentHypoSummary');
+    const verifSection = document.getElementById('sideAgentVerificationSection');
+    const stepsContent = document.getElementById('sideAgentStepsContent');
+    const remedSection = document.getElementById('sideAgentRemediationSection');
+    const remedDiff = document.getElementById('sideAgentRemediationDiff');
+
+    hypoSummary.innerHTML = '<span style="color:#58a6ff;">🤖 Formulating attack hypothesis and non-destructive checks...</span>';
+    verifSection.style.display = 'none';
+    remedSection.style.display = 'none';
+
+    try {
+      const res = await chrome.runtime.sendMessage({
+        action: 'agentInvestigate',
+        finding
+      });
+
+      if (res && res.success) {
+        hypoSummary.innerHTML = `
+          <strong>${escapeHtml(res.hypothesis.vulnerabilityType)}</strong> (${res.hypothesis.confidence})<br>
+          <span style="color:#8b949e;">Threat:</span> ${escapeHtml(res.hypothesis.threatActorModel)}<br>
+          <span style="color:#8b949e;">Vector:</span> ${escapeHtml(res.hypothesis.attackVector)}<br>
+          <span style="color:#8b949e;">Impact:</span> ${escapeHtml(res.hypothesis.expectedImpact)}
+        `;
+
+        if (res.steps && res.steps.length > 0) {
+          verifSection.style.display = 'block';
+          stepsContent.innerHTML = res.steps.map(s => `
+            <div style="margin-bottom:4px;">
+              <span style="color:#3fb950;">✓ Step ${s.step} [${s.tool}]:</span> ${escapeHtml(s.observation)}
+            </div>
+          `).join('');
+        }
+
+        if (res.remediation) {
+          remedSection.style.display = 'block';
+          remedDiff.textContent = res.remediation.diff + '\n\n// Regression Unit Test:\n' + res.remediation.testCode;
+        }
+      } else {
+        hypoSummary.textContent = 'Agent investigation failed: ' + (res?.error || 'Unknown error');
+      }
+    } catch (err) {
+      hypoSummary.textContent = 'Error contacting agent: ' + err.message;
+    }
   }
 
   function escapeHtml(str) {
